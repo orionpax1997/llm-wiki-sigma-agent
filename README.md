@@ -44,6 +44,20 @@ If `wiki/overview.md` or `wiki/index.md` is missing, the skill aborts — fall b
 
 See `.claude/skills/sigma-with-wiki/SKILL.md` for the full skill definition.
 
+### Example Wiki
+
+An example curriculum is included at `examples/learn-claude-code/` — 40+ Teaching Concepts built from the [learn.shareai.run](https://learn.shareai.run) Claude Code 中文教程 (s00–s19), generated entirely by this agent via ingest.
+
+**Two ways to get started:**
+
+1. **Copy the example to test immediately** — the example wiki already has a full Teaching Concept curriculum, ready for the tutor to read from:
+   ```bash
+   cp -r examples/learn-claude-code wiki/
+   ```
+   Run `/sigma-with-wiki` and it reads the wiki immediately — no ingest needed.
+
+2. **Self-collect** — drop your own sources into `raw/`, run ingest to build the wiki, and let the skill auto-derive the curriculum from `wiki/overview.md` + `wiki/index.md`. See [Usage](#usage) for the ingest workflow.
+
 ## Install
 
 **Requires:** [Claude Code](https://claude.ai/code), [Codex](https://openai.com/codex), [Gemini CLI](https://github.com/google-gemini/gemini-cli), or any agent that reads a config file.
