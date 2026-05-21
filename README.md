@@ -24,6 +24,26 @@ graph/
 └── graph.html        interactive vis.js visualization — open in any browser
 ```
 
+## Sigma Tutor (Built-in)
+
+This repo ships with `/sigma-with-wiki` — a wiki-grounded Bloom's 2-Sigma mastery tutor. The wiki **is** the curriculum:
+
+```
+/sigma-with-wiki                # auto: resume if session exists, else start fresh
+开始学习                         # fresh start
+继续学习                         # resume
+/sigma-with-wiki --visual       # rich visuals every round
+```
+
+**How it works:**
+- **No topic argument** — the skill reads `wiki/overview.md` + `wiki/index.md` on start, derives the entire learning roadmap automatically (scope, order, per-concept wiki pages), and starts teaching
+- **Wiki Read Gate** — before tutoring any concept, the skill re-reads that concept's wiki pages. Teaching never drifts from the source
+- **One session per repo** — state lives in `sigma-with-wiki/session/`, not per-topic subdirectories
+
+If `wiki/overview.md` or `wiki/index.md` is missing, the skill aborts — fall back to `/sigma` for ungrounded tutoring.
+
+See `.claude/skills/sigma-with-wiki/SKILL.md` for the full skill definition.
+
 ## Install
 
 **Requires:** [Claude Code](https://claude.ai/code), [Codex](https://openai.com/codex), [Gemini CLI](https://github.com/google-gemini/gemini-cli), or any agent that reads a config file.
