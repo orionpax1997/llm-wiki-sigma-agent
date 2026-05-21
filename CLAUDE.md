@@ -59,6 +59,136 @@ last_updated: YYYY-MM-DD
 
 Use `[[PageName]]` wikilinks to link to other wiki pages.
 
+### Concept Page Formats
+
+Concept pages (`wiki/concepts/*.md`) have two variants:
+
+**Standard Concept** — lightweight summary of an idea, framework, or theory.
+
+```markdown
+---
+title: "ConceptName"
+type: concept
+tags: []
+sources: []
+last_updated: YYYY-MM-DD
+---
+
+## Definition
+Brief definition.
+
+## Key Claims
+- Claim 1
+- Claim 2
+
+## Connections
+- [[RelatedConcept]] — relationship
+```
+
+**Teaching Concept** — structured chapter for Sigma 1v1 tutoring. Use when a concept is mature enough (covered by 2+ sources) to become a teachable unit. The ingest agent may create these incrementally as sources accumulate.
+
+```markdown
+---
+title: "ConceptName"
+type: concept
+tags: [curriculum, <topic-slug>, <difficulty>]
+sources: [source-slug-1, source-slug-2]
+last_updated: YYYY-MM-DD
+---
+
+## Core Thesis
+> One sentence capturing the soul of the concept. Tutor regresses here when the learner loses the thread.
+
+## Problem Definition
+What problem does this concept solve? What can the learner *not* do before vs. after?
+
+## Terminology
+| Term | Definition |
+|------|------------|
+| Term1 | Definition1 |
+
+## Mental Model
+ASCII diagram or structural description. The tutor guides the learner to *draw* it, not to show it directly.
+
+## Minimal Implementation
+The "130 LOC boundary" — smallest correct form. Explicitly note what is deliberately *not* covered here (deferred to later concepts).
+
+## System Position
+- Inherits from: [[Prereq1]], [[Prereq2]]
+- Prepares for: [[NextConcept1]], [[NextConcept2]]
+- Cross-links: [[RelatedConcept]]
+
+## Common Errors (Behavioral)
+| Error | Symptom | Detection Prompt |
+|-------|---------|-----------------|
+| Error1 | What goes wrong | Question to surface it |
+
+## Diagnostic Questions (Step 1)
+1. ...
+2. ...
+
+## Question Bank (Step 3b — Socratic)
+### Entry-level
+- ...
+### Advanced
+- ...
+
+## Hint Escalation Ladder (Step 3c)
+| Level | Hint |
+|-------|------|
+| L1 Rephrase | ... |
+| L2 Guide | ... |
+| L3 Analogy | ... |
+| L4 Deconstruct | ... |
+| L5 Worked Example | ... |
+
+## Misconceptions (Step 3d — Cognitive)
+| Misconception | Detection Question | Counter-example |
+|---------------|-------------------|-----------------|
+| "..." | ... | ... |
+
+## Mastery Check (Step 3g)
+| Dimension | Check Question | Pass Criterion |
+|-----------|---------------|----------------|
+| Accurate | ... | ... |
+| Causal | ... | ... |
+| Application | ... | ... |
+| Discrimination | ... | ... |
+
+**Session mastery threshold**: all dimensions ≥75%, overall ≥80%.
+
+## Practice Tasks (Step 3h)
+### Task 1: [Name] [Required, Weight X%]
+**Prompt**: ...
+
+**Acceptance Criteria**
+| ID | Item | Type | Pass Rule |
+|----|------|------|-----------|
+| AC-1 | ... | functional | ... |
+| AC-2 | ... | edge-case | ... |
+| AC-3 | ... | mechanism | ... |
+
+**Scoring**
+- PASS: all ACs pass
+- NEEDS_WORK: core ACs pass, mechanism/edge missed (1 rework allowed)
+- FAIL: any core AC fails
+
+## Chapter-level Pass Criteria
+Learner passes this concept iff:
+1. Mastery Check (Step 3g) all dimensions ≥75%
+2. Required Task(s) PASS
+3. Total practice score ≥75%
+
+**On FAIL**: return to Tutor Loop, do not advance.
+
+## Memory Mnemonic
+One sentence for session summary and spaced repetition.
+
+## Navigation
+- Previous: [[PrevConcept]]
+- Next: [[NextConcept]]
+```
+
 ---
 
 ## Ingest Workflow
@@ -75,9 +205,41 @@ Steps (in order):
 5. Update `wiki/overview.md` — revise synthesis if warranted
 6. Update/create entity pages for key people, companies, projects mentioned
 7. Update/create concept pages for key ideas and frameworks discussed
+   - **If the source contains pedagogical material** (exercises, examples, common errors, diagnostic questions, hint ladders, misconceptions, practice tasks): create as **Teaching Concept** directly
+   - **Else if user says** `"teachify <concept>"` or `"把 X 做成教学章节"`: create as **Teaching Concept** directly
+   - **Else**: create or update as **Standard Concept** (lightweight summary)
+   - **If concept already has 2+ sources** and the new source adds pedagogical material: prompt user — `"Concept X now has N sources. Upgrade to Teaching Concept?"`
 8. Flag any contradictions with existing wiki content
 9. Append to `wiki/log.md`: `## [YYYY-MM-DD] ingest | <Title>`
 10. **Post-ingest validation** — check for broken `[[wikilinks]]`, verify all new pages are in `index.md`, print a change summary
+
+---
+
+## Teachify Workflow (Standard → Teaching Concept)
+
+Triggered by: *"teachify <concept>"* or *"把 X 做成教学章节"*
+
+Converts a **Standard Concept** into a **Teaching Concept** by mining pedagogical material from its linked sources.
+
+Steps:
+1. Read the target `wiki/concepts/<ConceptName>.md`
+2. Read all `wiki/sources/*.md` listed in its `sources:` frontmatter
+3. Extract and synthesize:
+   - **Core Thesis** — the single sentence that captures the essence
+   - **Problem Definition** — what problem this concept solves
+   - **Terminology** — defined terms across sources
+   - **Mental Model** — structural understanding from source explanations
+   - **Common Errors** — error patterns mentioned in sources
+   - **Misconceptions** — contradictions or confusions found across sources
+   - **Practice Tasks** — exercises, code samples, or scenarios from sources
+4. Write the expanded `wiki/concepts/<ConceptName>.md` using the **Teaching Concept** format
+5. Mark incomplete sections explicitly (e.g., `## Hint Escalation Ladder (TODO — not found in sources)`)
+6. Update `wiki/index.md` — add `curriculum` tag if not present
+7. Append to `wiki/log.md`: `## [YYYY-MM-DD] teachify | <ConceptName>`
+
+**Note**: A Teaching Concept does not need to be complete in one pass. It can mature incrementally as more sources are ingested. Incomplete sections are fine — they signal where the knowledge base is thin.
+
+---
 
 ### Source Page Format
 
