@@ -2,6 +2,53 @@
 
 If you hit `HTTP Error 412: Precondition Failed` on a Bilibili video (common on non-Chinese data center IPs), apply PR [#16578](https://github.com/yt-dlp/yt-dlp/pull/16578)'s challenge solver to your local yt-dlp. The PR adds SHA-256 proof-of-work solving for Bilibili's anti-bot captcha. Without the patch, the only fix is cookies + Chinese-region IP egress.
 
+## Auto-applied on demand (after a 412 error)
+
+`scripts/transcribe.sh` only invokes `scripts/check_bilibili_patch.sh` when
+yt-dlp actually fails with a 412. The flow:
+
+1. yt-dlp download fails with 412.
+2. Script runs `check_bilibili_patch.sh`. The check:
+   1. Reads target version from `assets/yt-dlp-version` (currently `2026.06.09`).
+   2. Compares to `yt-dlp --version` — skip if mismatch.
+   3. Hashes the installed `bilibili.py` (resolved via the yt-dlp shebang Python).
+   4. If hash matches `assets/bilibili.py.original` → copies `assets/bilibili.py` over.
+   5. If hash matches `assets/bilibili.py` → no-op.
+   6. If hash matches neither → warn (avoids clobbering manual edits / different versions).
+   7. Permission denied → warn (system Python install needs `sudo`; or `apt remove yt-dlp` to drop the system copy).
+3. If the check applied the patch, the script re-execs itself with the same
+   args (guarded by `BILIBILI_PATCH_ATTEMPTED=1` env var, so it gives up
+   instead of looping if the patched yt-dlp still hits 412).
+4. If the check no-op'd or warned, the script exits with the original error.
+
+No overhead on non-Bilibili calls — the check only runs when needed. To
+pre-emptively apply (e.g., before transcribing a B-station URL you know
+will hit 412), run the check directly:
+
+```bash
+./scripts/check_bilibili_patch.sh
+```
+
+If the check warns (version drift or hash mismatch), fall back to manual:
+
+```bash
+SITE=$(head -1 "$(command -v yt-dlp)" | sed 's/^#!//')
+SITE="$("$SITE" -c 'import yt_dlp.extractor.bilibili, os; print(os.path.dirname(yt_dlp.extractor.bilibili.__file__))')"
+SKILL=~/.claude/skills/video-transcribe
+cp "$SKILL/assets/bilibili.py" "$SITE/bilibili.py"
+```
+
+If the version has drifted upstream, refresh `assets/`:
+
+```bash
+curl -sSL -o assets/bilibili.py \
+  "https://raw.githubusercontent.com/yt-dlp/yt-dlp/refs/pull/16578/head/yt_dlp/extractor/bilibili.py"
+# Update assets/yt-dlp-version, then re-run transcribe.sh.
+```
+
+The rest of this file is reference material for the patch contents — read it
+only if you want to understand or review the change.
+
 ## Symptom
 
 ```

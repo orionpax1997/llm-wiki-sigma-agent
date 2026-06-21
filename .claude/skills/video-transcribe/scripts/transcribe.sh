@@ -52,6 +52,11 @@ done
 
 [[ -z "$SOURCE" ]] && { echo "Error: URL or local file required." >&2; usage 1; }
 
+# Re-entry guard: BILIBILI_PATCH_ATTEMPTED is set when this script re-execs
+# itself after auto-applying the 412 patch. Prevents infinite retry if the
+# patch is in place but the challenge still fails.
+[[ -n "${BILIBILI_PATCH_ATTEMPTED:-}" ]] && PATCH_ATTEMPTED=1 || PATCH_ATTEMPTED=0
+
 # ---------- Required env (auto-detected with override) ----------
 WHISPER_CPP_MAIN="${WHISPER_CPP_MAIN:-$(command -v whisper-cli || true)}"
 [[ -z "$WHISPER_CPP_MAIN" ]] && { echo "Error: whisper-cli not found. Set WHISPER_CPP_MAIN or add it to PATH." >&2; exit 1; }
@@ -199,7 +204,22 @@ if [[ ! -s "$RAW_TEXT" ]]; then
     echo "  Local file may be invalid, corrupt, or in an unsupported format." >&2
   elif [[ -f "$YT_DLP_LOG" && -s "$YT_DLP_LOG" ]]; then
     if grep -qiE "412|precondition failed" "$YT_DLP_LOG"; then
-      echo "  → Bilibili 412 challenge. See references/bilibili-412-patch.md." >&2
+      if [[ $PATCH_ATTEMPTED -eq 1 ]]; then
+        echo "  → Bilibili 412 challenge. Patch already applied this run; giving up." >&2
+        echo "    The patched yt-dlp still hit 412 — Bilibili may be blocking your IP" >&2
+        echo "    or the challenge solver failed. See references/bilibili-412-patch.md." >&2
+      else
+        echo "  → Bilibili 412 challenge. Attempting on-demand patch from assets/..." >&2
+        CHECK_OUT="$( "$(dirname "$0")/check_bilibili_patch.sh" 2>&1 )" || true
+        if [[ -n "$CHECK_OUT" ]]; then
+          echo "$CHECK_OUT" | sed 's/^/    /' >&2
+        fi
+        if echo "$CHECK_OUT" | grep -q "Applied PR #16578 patch"; then
+          echo "  → Patch applied. Re-running pipeline..." >&2
+          BILIBILI_PATCH_ATTEMPTED=1 exec "$0" "$@"
+        fi
+        echo "  → Patch not applied. See references/bilibili-412-patch.md." >&2
+      fi
     elif grep -qiE "403|forbidden" "$YT_DLP_LOG"; then
       echo "  → HTTP 403. Video may be private or region-locked." >&2
     elif grep -qiE "404|not found|video (has been )?removed|unavailable" "$YT_DLP_LOG"; then
